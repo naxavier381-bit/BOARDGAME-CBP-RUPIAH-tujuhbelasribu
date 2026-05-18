@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CBP Rupiah - 100 Unique Tiles Arena</title>
+    <style>
+        :root {
+            --primary-blue: #0984e3;
+            --light-blue: #74b9ff;
+            --bg-white: #f5f6fa;
+            --accent-cyan: #00cec9;
+            --danger: #d63031;
+            --success: #00b894;
+            --gold: #fdcb6e;
+        }
+
+        body {
+            font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #f5f6fa 0%, #dfe6e9 50%, #74b9ff 100%);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .bg-float {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: rgba(116, 185, 255, 0.25);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1;
+            animation: floatUpDown 6s ease-in-out infinite alternate;
+        }
+
+        @keyframes floatUpDown {
+            0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 0.3; }
+            100% { transform: translateY(-100px) rotate(360deg) scale(1.2); opacity: 0.7; }
+        }
+
+        h1 {
+            color: var(--primary-blue);
+            text-align: center;
+            font-size: 2.3rem;
+            margin-bottom: 5px;
+            text-shadow: 0 4px 10px rgba(9, 132, 227, 0.15);
+            font-weight: 900;
+            z-index: 2;
+        }
+
+        .sub-title { color: #636e72; margin-bottom: 25px; text-align: center; font-weight: bold; z-index: 2; }
+
+        #fx-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; }
+
+        .setup-screen {
+            background: white;
+            padding: 35px;
+            border-radius: 28px;
+            box-shadow: 0 20px 50px rgba(9, 132, 227, 0.1);
+            width: 90%;
+            max-width: 520px;
+            border: 4px solid var(--light-blue);
+            text-align: center;
+            z-index: 10;
+        }
+
+        .player-input-row {
+            background: #f1f2f6;
+            border: 2px solid #dfe6e9;
+            padding: 12px 15px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .player-input-row input {
+            flex: 1; padding: 10px; border: 2px solid #cbd5e1; border-radius: 10px; font-size: 14px; outline: none; font-weight: bold;
+        }
+
+        .avatar-display { font-size: 32px; animation: miniBounce 0.6s infinite alternate; }
+        @keyframes miniBounce { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+
+        button {
+            background: linear-gradient(135deg, var(--primary-blue), var(--light-blue));
+            color: white; border: none; padding: 14px 30px;
+            font-size: 16px; font-weight: 800; border-radius: 50px; cursor: pointer;
+            box-shadow: 0 8px 15px rgba(9, 132, 227, 0.2); transition: all 0.2s ease;
+        }
+        button:hover { transform: scale(1.04) translateY(-2px); box-shadow: 0 12px 20px rgba(9, 132, 227, 0.3); }
+        .start-btn { width: 100%; margin-top: 10px; background: linear-gradient(135deg, var(--success), #55efc4); }
+
+        .game-screen { display: none; width: 100%; max-width: 1100px; flex-direction: column; align-items: center; z-index: 5; }
+
+        .board-container {
+            width: 100%;
+            max-height: 440px;
+            overflow-y: auto;
+            background: white;
+            padding: 15px;
+            border-radius: 24px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.06);
+            margin-bottom: 25px;
+            border: 4px solid var(--primary-blue);
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 8px;
+        }
+
+        .tile {
+            aspect-ratio: 1/1;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px;
+            font-size: 11px;
+            font-weight: 900;
+            color: var(--primary-blue);
+            background: #f8f9fa;
+            border: 2px solid #dfe6e9;
+            box-shadow: inset 0 -4px 0 rgba(0,0,0,0.04);
+        }
+
+        .tile:nth-child(even) { background-color: #ffffff; }
+        .tile:nth-child(4n+1) { background-color: #e3fafc; border-color: #a5f3fc; }
+        .tile:nth-child(4n+3) { background-color: #e8f4fd; border-color: #bfdbfe; }
+
+        .tile-start { background: linear-gradient(to bottom, #dbeafe, var(--light-blue)) !important; color: white !important; }
+        .tile-finish { background: linear-gradient(to bottom, var(--gold), #e17055) !important; color: white !important; animation: pulseGlow 0.8s infinite alternate; }
+        .tile-zonk { background-color: #ffe3e3 !important; border: 2px dashed var(--danger) !important; color: var(--danger) !important; }
+        .tile-bonus { background-color: #e6fffa !important; border: 2px solid var(--accent-cyan) !important; color: var(--accent-cyan) !important; }
+
+        @keyframes pulseGlow { from { transform: scale(1); } to { transform: scale(1.05); } }
+
+        .token-space { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; align-items: center; min-height: 25px; }
+        
+        .pion {
+            font-size: 24px;
+            animation: superBounce 0.4s infinite alternate;
+            filter: drop-shadow(0 3px 3px rgba(0,0,0,0.15));
+        }
+
+        @keyframes superBounce { from { transform: translateY(0); } to { transform: translateY(-10px); } }
+
+        .game-panel {
+            background: white;
+            padding: 20px; border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.05); width: 100%; max-width: 600px;
+            text-align: center; border: 2px solid #dfe6e9;
+        }
+
+        .turn-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .turn-indicator { font-size: 16px; font-weight: 800; padding: 10px 22px; border-radius: 30px; color: white; }
+
+        .timer-box {
+            font-size: 22px; font-weight: 900; color: #2d3436;
+            background: #dfe6e9; padding: 8px 20px; border-radius: 50px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .timer-urgent { background: var(--danger) !important; color: white !important; animation: shakeUrgent 0.15s infinite; }
+
+        @keyframes shakeUrgent { 0% { transform: translate(1px, 1px); } 100% { transform: translate(-1px, -1px); } }
+
+        .dice-container { perspective: 600px; margin: 10px auto; width: 75px; height: 75px; }
+        .dice {
+            width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
+            transition: transform 0.5s ease; cursor: pointer;
+        }
+        .dice-face {
+            position: absolute; width: 75px; height: 75px; background: white;
+            border: 4px solid var(--primary-blue); border-radius: 16px; display: flex;
+            justify-content: center; align-items: center; font-size: 32px; font-weight: 900;
+            color: var(--primary-blue);
+            box-shadow: inset 0 0 10px rgba(9, 132, 227, 0.1), 0 5px 10px rgba(0,0,0,0.05);
+        }
+        .face-1 { transform: rotateY(0deg) translateZ(37px); }
+        .face-2 { transform: rotateX(180deg) translateZ(37px); }
+        .face-3 { transform: rotateY(90deg) translateZ(37px); }
+        .face-4 { transform: rotateY(-90deg) translateZ(37px); }
+        .face-5 { transform: rotateX(90deg) translateZ(37px); }
+        .face-6 { transform: rotateX(-90deg) translateZ(37px); }
+        
+        .rolling { animation: crazySpin 0.4s infinite linear; }
+        @keyframes crazySpin { 0% { transform: rotateX(0deg) rotateY(0deg); } 100% { transform: rotateX(360deg) rotateY(360deg); } }
+
+        .quiz-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(9, 132, 227, 0.25); backdrop-filter: blur(8px); z-index: 100;
+            justify-content: center; align-items: center;
+        }
+        .quiz-modal {
+            background: white; padding: 30px; border-radius: 24px; max-width: 580px; width: 90%;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15); border: 4px solid var(--primary-blue);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.15);
+        }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .category-badge { background: #e3fafc; color: var(--primary-blue); padding: 5px 14px; border-radius: 30px; font-size: 12px; font-weight: 800; }
+        .options-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .opt-btn {
+            background: #f8f9fa; color: #2d3436; text-align: left; padding: 14px;
+            border: 2px solid #dfe6e9; border-radius: 12px; font-size: 14px; font-weight: 700;
+            transition: all 0.2s;
+        }
+        .opt-btn:hover { background: #e8f4fd; border-color: var(--primary-blue); }
+    </style>
+</head>
+<body>
+
+    <div class="bg-float" style="top:15%; left:6%; animation-duration: 5s;"></div>
+    <div class="bg-float" style="top:65%; left:9%; animation-duration: 8s; width:55px; height:55px;"></div>
+    <div class="bg-float" style="top:25%; right:11%; animation-duration: 6s;"></div>
+    <div class="bg-float" style="top:75%; right:6%; animation-duration: 4s; width:35px; height:35px;"></div>
+
+    <canvas id="fx-canvas"></canvas>
+
+    <h1>💎 CBP RUPIAH SAFARI ARENA 💎</h1>
+    <div class="sub-title">Arena Kompetisi • 100% Pertanyaan Unik Berbeda Tiap Petak</div>
+
+    <div class="setup-screen" id="setup-screen">
+        <h3 style="margin-top: 5px; color: var(--primary-blue);">Registrasi Pemain</h3>
+        <p style="font-size: 12px; color: #636e72; margin-top:-5px;">*Audio efek otomatis aktif saat game dimulai</p>
+        <div id="player-inputs-container"></div>
+        <button class="start-btn" onclick="startGame()">MASUK MAP ARENA TANDING 🚀</button>
+    </div>
+
+    <div class="game-screen" id="game-screen">
+        <div class="board-container">
+            <div id="board"></div>
+        </div>
+
+        <div class="game-panel">
+            <div class="turn-header">
+                <div id="current-turn-box" class="turn-indicator">Giliran: Player</div>
+                <div id="timer-display" class="timer-box">⏱️ <span id="timer-num">10</span>s</div>
+            </div>
+            
+            <div class="dice-container" onclick="rollDice()">
+                <div class="dice" id="visual-dice">
+                    <div class="dice-face face-1">🎲</div>
+                    <div class="dice-face face-2">2</div>
+                    <div class="dice-face face-3">3</div>
+                    <div class="dice-face face-4">4</div>
+                    <div class="dice-face face-5">5</div>
+                    <div class="dice-face face-6">6</div>
+                </div>
+            </div>
+            <div id="game-info-msg" style="font-weight: bold; font-size: 15px; color: #2d3436;">Klik dadu untuk mengocok!</div>
+        </div>
+    </div>
+
+    <div class="quiz-overlay" id="quiz-overlay">
+        <div class="quiz-modal">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span id="quiz-category" class="category-badge">Kategori</span>
+                <span id="modal-timer" style="font-weight:900; color: var(--danger); font-size: 20px;">⏱️ 30s</span>
+            </div>
+            <p id="active-player-name" style="font-size: 13px; font-weight: bold; color: #636e72; margin-top: 15px; margin-bottom: 0;"></p>
+            <h3 id="quiz-question" style="margin-top: 5px; font-size: 16px; color: #2d3436; line-height: 1.5;">Pertanyaan</h3>
+            <div class="options-list" id="quiz-options"></div>
+        </div>
+    </div>
+
+<script>
+// ==============================================================================
+// 📋 DATABASE MANUAL 100 PERTANYAAN UNIK TANPA PERULANGAN
+// ==============================================================================
+const rawBankSoal = [
+    { k: "Cinta Rupiah", q: "Apa perwujudan utama dari nilai Cinta Rupiah?", a: "Mengenali ciri keaslian dan merawat uang fisik", w: ["Menyimpan uang di luar negeri", "Membelanjakan semua uang", "Mengabaikan uang robek"] },
+    { k: "Cinta Rupiah", q: "Slogan utama gerakan merawat uang Rupiah dikenal dengan nama...", a: "Sayangi Rupiahmu", w: ["Belanja hemat", "Simpan uang digital", "Investasi emas"] },
+    { k: "Bangga Rupiah", q: "Mengapa kita harus Bangga terhadap mata uang Rupiah?", a: "Sebab Rupiah melambangkan kedaulatan NKRI", w: ["Karena nilainya paling tinggi di dunia", "Agar bisa dipakai di seluruh benua", "Karena terbuat dari emas murni"] },
+    { k: "Bangga Rupiah", q: "Di wilayah manakah penggunaan Rupiah diwajibkan secara mutlak?", a: "Seluruh wilayah hukum kedaulatan NKRI", w: ["Hanya di kota Jakarta", "Di bandara internasional saja", "Kawasan ASEAN"] },
+    { k: "Paham Rupiah", q: "Bagaimana wujud tindakan Paham Rupiah dalam kehidupan sehari-hari?", a: "Berbelanja secara bijak sesuai kebutuhan", w: ["Membeli barang diskon berlebihan", "Menimbun stok sembako", "Menyimpan dollar di rumah"] },
+    { k: "Paham Rupiah", q: "Apa aksi nyata yang diajarkan pada poin Paham Rupiah?", a: "Belanja Bijak", w: ["Jangan dilipat", "Cari kembalian", "Gunakan kartu kredit"] },
+    { k: "Dasar Hukum", q: "Pasal dalam UUD 1945 yang mengatur landasan mata uang adalah...", a: "Pasal 23B", w: ["Pasal 23A", "Pasal 27", "Pasal 33"] },
+    { k: "Dasar Hukum", q: "Undang-Undang yang mengatur khusus tentang Mata Uang adalah...", a: "UU No. 7 Tahun 2011", w: ["UU No. 23 Tahun 1999", "UU No. 1 Tahun 2004", "UU No. 11 Tahun 2020"] },
+    { k: "Dasar Hukum", q: "Lembaga negara yang memegang mandat tunggal pengedaran uang Rupiah adalah...", a: "Bank Indonesia", w: ["Kementerian Keuangan", "OJK", "Perum Peruri"] },
+    { k: "Pengelolaan Uang", q: "Tahap awal dari siklus tata kelola uang Rupiah oleh Bank Indonesia adalah...", a: "Perencanaan", w: ["Pencetakan", "Pengedaran", "Pencabutan"] },
+    { k: "Pengelolaan Uang", q: "Pemusnahan uang kertas dilakukan oleh Bank Indonesia khusus terhadap...", a: "Uang tidak layak edar", w: ["Uang baru dicetak", "Uang kertas emisi terbaru", "Uang kuno kolektor"] },
+    { k: "Ciri Keaslian", q: "Mengecek perubahan warna benang pengaman termasuk dalam metode...", a: "Dilihat", w: ["Diraba", "Diterawang", "Disorot UV"] },
+    { k: "Ciri Keaslian", q: "Tekstur kasar pada area gambar pahlawan dapat dikenali dengan cara...", a: "Diraba", w: ["Dilihat", "Diterawang", "Didengar"] },
+    { k: "Ciri Keaslian", q: "Melihat gambar tanda air (watermark) pahlawan dilakukan dengan cara...", a: "Diterawang ke arah cahaya", w: ["Dilihat langsung", "Digesek ke kertas", "Dilipat dua"] },
+    { k: "TE 2022", q: "Uang Emisi yang menggunakan benang pengaman teknologi Microlenses adalah...", a: "TE 2022", w: ["TE 2016", "TE 2004", "TE 1999"] },
+    { k: "TE 2022", q: "Teknologi tinta berubah warna magnetik dinamis pada TE 2022 dinamakan...", a: "OVMI", w: ["UV Glow", "Intaglio Print", "Rectoverso"] },
+    { k: "Prestasi Rupiah", q: "Penghargaan internasional yang diraih uang TE 2022 di ajang IACA 2023 adalah...", a: "Best New Banknote Series", w: ["Best Tech Innovation", "Most Beautiful Coin", "Best Eco Green Paper"] },
+    { k: "UPK 75", q: "Uang Peringatan Kemerdekaan Rp75.000 dikeluarkan secara resmi pada tahun...", a: "2020", w: ["2016", "2022", "2024"] },
+    { k: "Merawat Rupiah", q: "Manakah tindakan di bawah ini yang melanggar prinsip merawat Rupiah?", a: "Menyetapler uang kertas", w: ["Menyusun searah", "Menyimpan di dompet datar", "Menghitung manual"] },
+    { k: "Fungsi Rupiah", q: "Rupiah bertindak sebagai alat penentu nilai barang. Ini disebut fungsi...", a: "Satuan hitung", w: ["Alat tukar", "Penyimpan nilai", "Komoditas pasar"] },
+    { k: "Cinta Rupiah", q: "Menjaga kebersihan uang Rupiah agar tidak lecek merupakan bagian dari...", a: "Merawat Rupiah", w: ["Mengenali Rupiah", "Menjaga Rupiah", "Membanggakan Rupiah"] },
+    { k: "Cinta Rupiah", q: "Mengapa mencoret-coret uang kertas dilarang keras oleh hukum?", a: "Merusak estetika dan merusak ciri keaslian uang", w: ["Membuat nilai nominalnya naik", "Mengubah warna uang menjadi emas", "Menambah berat timbangan uang"] },
+    { k: "Bangga Rupiah", q: "Rupiah sebagai satu-satunya alat pembayaran sah tertuang dalam UU Mata Uang pasal...", a: "Pasal 21", w: ["Pasal 1", "Pasal 10", "Pasal 40"] },
+    { k: "Bangga Rupiah", q: "Menggunakan mata uang asing untuk bertransaksi di dalam negeri melanggar prinsip...", a: "Kedaulatan ekonomi bangsa", w: ["Kebebasan berbelanja", "Efisiensi pasar global", "Modernisasi digital"] },
+    { k: "Paham Rupiah", q: "Fungsi Rupiah dalam menyimpan kekayaan untuk masa depan disebut fungsi...", a: "Penyimpan nilai", w: ["Alat tukar", "Satuan hitung", "Alat penimbun"] },
+    { k: "Paham Rupiah", q: "Belanja bijak berarti membeli barang sesuai dengan...", a: "Kebutuhan utama, bukan keinginan sesaat", w: ["Jumlah diskon yang tersedia", "Tren di media sosial", "Batas maksimal limit kartu"] },
+    { k: "Sejarah Rupiah", q: "Mata uang resmi pertama yang diterbitkan darurat oleh pemerintah RI tahun 1946 adalah...", a: "ORI (Oeang Republik Indonesia)", w: ["Rupiah BI", "Gulden NICA", "Uang Sen Kuno"] },
+    { k: "Sejarah Rupiah", q: "Pada tahun berapakah Bank Indonesia resmi berdiri sebagai Bank Sentral?", a: "1953", w: ["1945", "1950", "1965"] },
+    { k: "Pengelolaan Uang", q: "Perusahaan negara yang ditunjuk resmi mencetak uang Rupiah adalah...", a: "Perum Peruri", w: ["PT Telkom", "PT Antam", "Bank Indonesia Persero"] },
+    { k: "Pengelolaan Uang", q: "Siapa yang menandatangani uang kertas Rupiah selain Gubernur Bank Indonesia?", a: "Menteri Keuangan RI", w: ["Presiden RI", "Ketua DPR RI", "Direktur Utama Peruri"] },
+    { k: "Ciri Keaslian", q: "Gambar saling isi pada uang Rupiah yang terlihat utuh saat diterawang disebut...", a: "Rectoverso", w: ["Watermark", "Microtext", "Blind Code"] },
+    { k: "Ciri Keaslian", q: "Kode tunanetra berupa tonjolan efek cetak terasa kasar dinamakan...", a: "Blind Code", w: ["Intaglio Text", "Latent Image", "Rainbow Printing"] },
+    { k: "TE 2022", q: "Warna dominan pecahan uang kertas Rp100.000 Emisi 2022 adalah...", a: "Merah", w: ["Hijau", "Biru", "Ungu"] },
+    { k: "TE 2022", q: "Tokoh pahlawan nasional pada bagian depan uang pecahan Rp50.000 TE 2022 adalah...", a: "Ir. H. Djuanda Kartawidjaja", w: ["Drs. Mohammad Hatta", "GSSJ Ratulangi", "Frans Kaisiepo"] },
+    { k: "TE 2022", q: "Tari daerah yang digambarkan pada bagian belakang uang Rp20.000 TE 2022 adalah...", a: "Tari Gong", w: ["Tari Topeng Cirebon", "Tari Gambyong", "Tari Legong"] },
+    { k: "TE 2022", q: "Pemandangan alam nasional yang ada pada pecahan uang Rp10.000 TE 2022 adalah...", a: "Taman Nasional Wakatobi", w: ["Raja Ampat", "Gunung Bromo", "Ngarai Sianok"] },
+    { k: "Cinta Rupiah", q: "Tindakan membasahi uang kertas dapat mengakibatkan...", a: "Kerusakan serat kertas dan pudarnya pengaman", w: ["Uang berubah menjadi pecahan baru", "Nominal uang berlipat ganda", "Tinta tulisan menjadi mengkilap"] },
+    { k: "Bangga Rupiah", q: "Salah satu pahlawan asal Papua pada pecahan uang Rp10.000 adalah...", a: "Frans Kaisiepo", w: ["Silas Papare", "Marthen Indey", "Johannes Leimena"] },
+    { k: "Paham Rupiah", q: "Menabung uang Rupiah di bank membantu negara dalam menjaga...", a: "Stabilitas nilai tukar ekonomi", w: ["Jumlah hutang luar negeri", "Keuntungan pemilik saham perorangan", "Persediaan emas dunia"] },
+    { k: "Pengelolaan Uang", q: "Uang yang ditarik dari peredaran oleh BI dikategorikan sebagai...", a: "Uang dicabut atau tidak berlaku", w: ["Uang langka koleksi", "Uang investasi berjangka", "Uang cadangan darurat"] },
+    { k: "Ciri Keaslian", q: "Benang pengaman pada uang kertas Rupiah ditanam di dalam kertas atau dianyam seperti...", a: "Garis putus-putus plastik yang bisa berubah warna", w: ["Kawat besi tebal nan kaku", "Benang jahit kain wol tekstil", "Pita perekat bening transparan"] },
+    { k: "Sejarah Rupiah", q: "Sebelum digantikan ORI, mata uang masa pendudukan Jepang yang sempat beredar bernama...", a: "Uang Invasi Jepang / Gunter clan", w: ["Gulden Belanda", "Ringgit Selat", "Dolar Pendudukan"] },
+    { k: "Cinta Rupiah", q: "Menyimpan uang kertas dengan cara diremas di saku celana melanggar asas...", a: "Merawat Rupiah", w: ["Membanggakan Rupiah", "Memahami Rupiah", "Mendistribusikan Rupiah"] },
+    { k: "Bangga Rupiah", q: "Gambar kepulauan Indonesia pada uang kertas melambangkan aspek...", a: "Persatuan wilayah NKRI", w: ["Luasnya perkebunan sawit", "Jalur perdagangan maritim komersial", "Lokasi penambangan minyak bumi"] },
+    { k: "Paham Rupiah", q: "Mengapa inflasi yang tinggi bisa merugikan nilai uang Rupiah kita?", a: "Sebab menurunkan daya beli uang terhadap barang", w: ["Sebab mengubah bentuk fisik uang kertas", "Membuat bank menutup tabungan masyarakat", "Menaikkan berat koin logam"] },
+    { k: "Pengelolaan Uang", q: "Kegiatan mendistribusikan uang Rupiah ke seluruh kas titipan BI bertujuan untuk...", a: "Memenuhi kecukupan uang layak edar di daerah", w: ["Meningkatkan inflasi lokal daerah", "Menimbun stok uang di daerah terpencil", "Mengganti seluruh sistem non-tunai"] },
+    { k: "Ciri Keaslian", q: "Menggunakan lampu ultraviolet berguna untuk melihat unsur...", a: "Hasil cetak memendar (glow in the dark)", w: ["Tanda air gambar pahlawan", "Benang pengaman microlenses", "Ketebalan bahan serat kapas"] },
+    { k: "TE 2022", q: "Siapa pahlawan nasional di pecahan uang kertas Rp2.000 TE 2022?", a: "Mohammad Hoesni Thamrin", w: ["Idham Chalid", "Cut Meutia", "Tjut Nja Dhien"] },
+    { k: "TE 2022", q: "Bunga nasional pada bagian belakang pecahan Rp100.000 TE 2022 adalah...", a: "Bunga Anggrek Bulan", w: ["Bunga Melati Putih", "Bunga Rafflesia Arnoldii", "Bunga Kantong Semar"] },
+    { k: "Fungsi Rupiah", q: "Ketika Anda menukar uang Rp10.000 dengan segelas es teh manis, uang berfungsi sebagai...", a: "Alat tukar/pembayaran", w: ["Satuan hitung nilai", "Penyimpan kekayaan", "Alat penjamin utang"] },
+    { k: "Cinta Rupiah", q: "Unsur 3D dalam mengenali keaslian Rupiah adalah singkatan dari...", a: "Dilihat, Diraba, Diterawang", w: ["Dilihat, Dirasa, Diterawang", "Disorot, Diraba, Dilipat", "Diperiksa, Didengar, Diterawang"] },
+    { k: "Bangga Rupiah", q: "Desain uang Rupiah menampilkan keragaman budaya dengan tujuan...", a: "Memperkenalkan kekayaan budaya sebagai identitas bangsa", w: ["Menarik minat investor asing membeli saham", "Dijadikan bahan baku kompetisi seni lukis", "Memenuhi slot kosong kertas cetakan"] },
+    { k: "Paham Rupiah", q: "Aksi memahami nilai Rupiah dengan tidak menimbun mata uang asing secara ilegal disebut...", a: "Menjaga stabilitas nilai Rupiah", w: ["Spekulasi pasar uang global", "Investasi saham luar negeri", "Optimalisasi aset digital"] },
+    { k: "Pengelolaan Uang", q: "Pihak yang menetapkan perencanaan jumlah uang yang akan dicetak adalah...", a: "Bank Indonesia berkoordinasi dengan Pemerintah", w: ["Perum Peruri secara mandiri", "Presiden RI langsung tanpa syarat", "Gubernur seluruh provinsi Indonesia"] },
+    { k: "Ciri Keaslian", q: "Tulisan berukuran sangat kecil yang hanya bisa dibaca dengan kaca pembesar disebut...", a: "Mikroteks", w: ["Makroteks", "Miniscript", "Invisible Ink"] },
+    { k: "TE 2022", q: "Pecahan terkecil uang kertas pada Emisi Tahun 2022 bernilai...", a: "Rp1.000", w: ["Rp500", "Rp2.000", "Rp100"] },
+    { k: "Sejarah Rupiah", q: "Mata uang gulden diterbitkan pada masa kolonial oleh negara...", a: "Belanda", w: ["Inggris", "Jepang", "Portugis"] },
+    { k: "Cinta Rupiah", q: "Menghindari melipat uang bertujuan agar...", a: "Uang tidak cepat lusuh dan mesin ATM mudah membaca", w: ["Nominal uang tidak terbagi dua", "Uang tidak berubah warna jadi hitam", "Mencegah pencurian di malam hari"] },
+    { k: "Bangga Rupiah", q: "Rupiah merupakan alat pembayaran sah yang tidak boleh ditolak di NKRI menurut pasal...", a: "Pasal 23 UU Mata Uang", w: ["Pasal 5 UU Perbankan", "Pasal 9 UU BI", "Pasal 12 UUD 1945"] },
+    { k: "Paham Rupiah", q: "Salah satu contoh investasi yang aman menggunakan Rupiah adalah...", a: "Membeli Surat Berharga Negara (SBN)", w: ["Ikut arisan online bodong", "Menyimpan uang di bawah ubin rumah", "Membeli koin game virtual"] },
+    { k: "Pengelolaan Uang", q: "Uang Rupiah yang dikeluarkan dan diedarkan oleh BI disebut sebagai...", a: "Uang Layak Edar (ULE)", w: ["Uang Tidak Layak Edar (UTLE)", "Uang Rusak Total", "Uang Palsu Legal"] },
+    { k: "Ciri Keaslian", q: "Gambar tersembunyi yang hanya terlihat dari sudut pandang tertentu disebut...", a: "Citra Laten (Latent Image)", w: ["Watermark", "Rectoverso", "Rainbow Print"] },
+    { k: "TE 2022", q: "Warna dominan dari pecahan uang Rp20.000 TE 2022 adalah...", a: "Hijau", w: ["Merah", "Biru", "Abu-abu"] },
+    { k: "TE 2022", q: "Siapa pahlawan di bagian depan uang Rp10.000 TE 2022?", a: "Frans Kaisiepo", w: ["Idham Chalid", "Djuanda Kartawidjaja", "Mohammad Hatta"] },
+    { k: "Cinta Rupiah", q: "Tindakan menstapler uang kertas biasanya merusak bagian...", a: "Serat kertas sehingga mudah robek meluas", w: ["Nilai tukar nominal uang", "Keaslian tanda tangan menteri", "Ketebalan logam koin kuno"] },
+    { k: "Bangga Rupiah", q: "Sikap bangga Rupiah dapat ditunjukkan dengan...", a: "Menggunakan Rupiah di setiap transaksi domestik", w: ["Mengoleksi dollar sebanyak-bungkin", "Menolak kembalian uang koin logam", "Memajang uang asli di dinding terbuka"] },
+    { k: "Paham Rupiah", q: "Perilaku tidak panik memborong barang saat isu kelangkaan disebut...", a: "Belanja bijak", w: ["Investasi agresif", "Spekulasi pasar", "Gaya hidup konsumtif"] },
+    { k: "Pengelolaan Uang", q: "Proses penarikan uang rusak dari masyarakat dilakukan melalui...", a: "Kantor Bank Indonesia atau bank umum terdekat", w: ["Pasar tradisional setempat", "Kantor polisi sektor", "Perusahaan percetakan Peruri"] },
+    { k: "Ciri Keaslian", q: "Bahan dasar pembuatan uang kertas Rupiah kualitas tinggi adalah...", a: "Serat kapas", w: ["Kertas koran biasa", "Plastik daur ulang tipis", "Kertas kayu pinus"] },
+    { k: "TE 2022", q: "Situs warisan dunia yang ada di uang Rp50.000 TE 2022 adalah...", a: "Taman Nasional Komodo", w: ["Banda Neira", "Raja Ampat", "Candi Borobudur"] },
+    { k: "Sejarah Rupiah", q: "Uang logam pertama RI pasca kemerdekaan mulai beredar luas pada tahun...", a: "1952", w: ["1945", "1960", "1975"] },
+    { k: "Cinta Rupiah", q: "Mengapa uang Rupiah harus kita simpan di dalam dompet dengan posisi rapi?", a: "Agar fisik uang terjaga baik, tidak terlipat atau kusut", w: ["Agar nominal uangnya bertambah sendiri", "Supaya terhindar dari pajak penghasilan", "Memudahkan pencuri menghitung uang"] },
+    { k: "Bangga Rupiah", q: "Pahlawan nasional wanita tunggal yang menghiasi uang kertas TE 2022 adalah...", a: "Cut Meutia", w: ["R.A. Kartini", "Dewi Sartika", "Nyi Ageng Serang"] },
+    { k: "Paham Rupiah", q: "Peran masyarakat dalam menjaga nilai Rupiah stabil terhadap mata uang asing adalah...", a: "Mencintai produk dalam negeri", w: ["Sering berlibur ke luar negeri", "Membeli barang impor mewah", "Membuat tabungan valuta asing"] },
+    { k: "Pengelolaan Uang", q: "Setiap berapa tahun sekali umumnya Bank Indonesia memperbarui seri emisi uang?", a: "Secara berkala sesuai kebutuhan pengamanan baru", w: ["Setiap 1 tahun sekali secara wajib", "Setiap 50 tahun sekali tanpa kecuali", "Tidak pernah diperbarui lagi"] },
+    { k: "Ciri Keaslian", q: "Ciri khas benang pengaman pada pecahan Rp100.000 dan Rp50.000 TE 2022 adalah...", a: "Lebih lebar dan memuat efek gerak dinamis", w: ["Lebih tipis dan tidak terlihat mata telanjang", "Terbuat dari anyaman benang sutra emas asli", "Berwarna hitam pekat permanen"] },
+    { k: "TE 2022", q: "Pahlawan nasional KH. Idham Chalid berada di pecahan uang...", a: "Rp5.000", w: ["Rp2.000", "Rp10.000", "Rp20.000"] },
+    { k: "TE 2022", q: "Pemandangan alam Banda Neira dapat kita lihat pada uang kertas pecahan...", a: "Rp10.000", w: ["Rp20.000", "Rp50.000", "Rp100.000"] },
+    { k: "Cinta Rupiah", q: "Meremas uang kertas di saku pakaian melanggar gerakan kampanye...", a: "5 Jangan", w: ["3 Utama", "4 Selaras", "6 Pilar"] },
+    { k: "Bangga Rupiah", q: "Sanksi pidana sengaja merusak fisik uang Rupiah diatur dalam UU No. 7 Tahun 2011 pasal...", a: "Pasal 35", w: ["Pasal 5", "Pasal 15", "Pasal 50"] },
+    { k: "Paham Rupiah", q: "Fungsi uang sebagai alat bayar sah internasional lewat konversi dinamakan...", a: "Alat transaksi", w: ["Penyimpan modal", "Satuan komoditas keuangan", "Penjamin likuiditas"] },
+    { k: "Pengelolaan Uang", q: "Uang logam Rupiah terbuat dari bahan dominan berupa...", a: "Aluminium, nikel, atau kuningan", w: ["Besi karat tebal", "Perak murni cair", "Tembaga campuran timah hitam"] },
+    { k: "Ciri Keaslian", q: "Tanda tangan siapa yang termuat pada uang kertas Rupiah seri emisi terbaru?", a: "Gubernur Bank Indonesia dan Menteri Keuangan", w: ["Presiden dan Wakil Presiden", "Ketua OJK dan Direktur Peruri", "Gubernur BI dan Direktur Bank Mandiri"] },
+    { k: "TE 2022", q: "Tari Legong dipasangkan pada bagian belakang pecahan uang kertas bernilai...", a: "Rp50.000", w: ["Rp100.000", "Rp20.000", "Rp5.000"] },
+    { k: "TE 2022", q: "Pecahan Rp20.000 TE 2022 menampilkan wajah pahlawan bernama...", a: "G.S.S.J. Ratulangi", w: ["Frans Kaisiepo", "Idham Chalid", "Djuanda Kartawidjaja"] },
+    { k: "Cinta Rupiah", q: "Uang palsu tidak memiliki nilai karena tidak diterbitkan oleh...", a: "Bank Sentral resmi (Bank Indonesia)", w: ["Kementerian Perdagangan", "Koperasi pasar daerah", "Pemerintah daerah setempat"] },
+    { k: "Bangga Rupiah", q: "Penggunaan Rupiah di wilayah perbatasan NKRI berfungsi menegaskan...", a: "Kedaulatan wilayah politik dan ekonomi RI", w: ["Keunggulan harga komoditas lokal", "Sistem barter internasional", "Keberadaan pos militer semata"] },
+    { k: "Paham Rupiah", q: "Mengelola pengeluaran dengan cermat membantu mencegah perilaku...", a: "Konsumtif boros", w: ["Hemat pangkal kaya", "Investasi produktif", "Donasi kemainan"] },
+    { k: "Pengelolaan Uang", q: "Bank Indonesia mengedarkan uang Rupiah ke masyarakat melalui perantara...", a: "Perbankan komersial dan kas keliling", w: ["Toko ritel online global", "Badan Urusan Logistik", "Kementerian Sosial langsung"] },
+    { k: "Ciri Keaslian", q: "Jika diraba, bagian teks 'BANK INDONESIA' akan terasa...", a: "Kasar menonjol", w: ["Halus licin", "Basah dingin", "Cekung ke dalam"] },
+    { k: "TE 2022", q: "Tari Gambyong dapat kita temukan di bagian belakang pecahan uang...", a: "Rp5.000", w: ["Rp2.000", "Rp1.000", "Rp10.000"] },
+    { k: "TE 2022", q: "Pemandangan alam Derawan terdapat pada bagian belakang uang pecahan...", a: "Rp20.000", w: ["Rp50.000", "Rp100.000", "Rp5.000"] },
+    { k: "Cinta Rupiah", q: "Menjemur uang kertas yang basah di bawah terik matahari langsung terlalu lama dapat...", a: "Merusak serat kapas dan memudarkan warna asli", w: ["Menaikkan kualitas benang pengaman otomatis", "Mengubah nominal uang kertas menjadi besar", "Mencegah uang robek saat dilipat kelak"] },
+    { k: "Bangga Rupiah", q: "Logo tersembunyi BI yang memendar saat disorot lampu UV merupakan bentuk...", a: "Fitur pengaman berteknologi tinggi", w: ["Desain pajangan pelengkap", "Tanda tangan digital pencetak", "Seni lukis abstrak modern"] },
+    { k: "Paham Rupiah", q: "Memilih produk lokal dibanding produk impor merupakan cerminan dari...", a: "Paham menjaga stabilitas nilai Rupiah", w: ["Ketidakmampuan membeli barang mahal", "Aksi boikot perdagangan internasional", "Gaya hidup modern kebarat-baratan"] },
+    { k: "Pengelolaan Uang", q: "Tindakan menolak menerima Rupiah sebagai pembayaran sah di wilayah NKRI diancam dengan...", a: "Hukuman kurungan pidana dan denda uang", w: ["Pencabutan status warga negara", "Penyitaan seluruh aset rumah tangga", "Teguran lisan dari rukun tetangga"] },
+    { k: "Ciri Keaslian", q: "Bahan kertas uang Rupiah tidak mudah hancur jika tidak sengaja tercuci karena dibuat dari...", a: "Serat kapas pilihan berkekuatan tinggi", w: ["Kertas daur ulang majalah bekas", "Campuran serat bambu muda tipis", "Kertas lilin kedap air biasa"] },
+    { k: "TE 2022", q: "Pahlawan nasional Tjut Meutia digambarkan pada pecahan uang...", a: "Rp1.000", w: ["Rp2.000", "Rp5.000", "Rp10.000"] },
+    { k: "TE 2022", q: "Tari Tifa digambarkan pada bagian belakang uang kertas pecahan...", a: "Rp1.000", w: ["Rp2.000", "Rp5.000", "Rp10.000"] },
+    { k: "Paham Rupiah", q: "Tujuan akhir dari memahami kedaulatan Rupiah secara nasional adalah...", a: "Mewujudkan kemandirian ekonomi dan kesejahteraan bangsa", w: ["Mencetak uang sebanyak-banyaknya untuk warga", "Mengganti mata uang negara tetangga terdekat", "Memenangkan kompetisi desain uang cantik dunia"] }
+];
+
+const bankPertanyaan = rawBankSoal.map((b, i) => {
+    let pilihanAcak = [b.a, ...b.w].sort(() => Math.random() - 0.5);
+    return {
+        pertanyaan: `[Petak Arena ${i + 1}] ${b.q}`,
+        pilihan: pilihanAcak,
+        jawaban: pilihanAcak.indexOf(b.a),
+        kategori: b.k
+    };
+});
+
+const hewanAvatar = ["🐰 Kelinci", "🦁 Singa", "🦊 Rubah", "🐼 Panda"];
+const warnaPemain = ['#0984e3', '#00cec9', '#6c5ce7', '#ffeaa7'];
+const TOTAL_PETAK = 100; 
+
+const tipePetak = {
+    12: { tipe: "bonus", nilai: 4, label: "🚀 BOOST (+4)" },
+    25: { tipe: "zonk", nilai: 5, label: "💥 TRAP (-5)" },
+    45: { tipe: "bonus", nilai: 6, label: "🚀 WARP (+6)" },
+    55: { tipe: "zonk", nilai: 8, label: "💥 MEGA TRAP (-8)" },
+    70: { tipe: "bonus", nilai: 8, label: "🚀 FLY (+8)" },
+    88: { tipe: "zonk", nilai: 12, label: "💥 DOOMSDAY (-12)" },
+    96: { tipe: "zonk", nilai: 15, label: "💥 CRISIS (-15)" }
+};
+
+let dataPemain = [];
+let indeksTurn = 0;
+let angkaDaduSekarang = 0;
+let gameAktif = false;
+let daduBisaDikocok = true;
+let hitungMundur;
+let sisaWaktu = 30;
+let audioCtx = null;
+
+function initAudioEngine() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function mainkanSFX(tipe) {
+    initAudioEngine();
+    if (!audioCtx) return;
+    
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+
+    if (tipe === 'dice') {
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    } else if (tipe === 'correct') {
+        osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); 
+        osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); 
+        osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.2); 
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+    } else if (tipe === 'wrong') {
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(60, audioCtx.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+    } else if (tipe === 'tick') {
+        osc.type = 'sine'; osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.04);
+    }
+}
+
+function initSetup() {
+    const container = document.getElementById("player-inputs-container");
+    container.innerHTML = "";
+    for (let i = 1; i <= 4; i++) {
+        const row = document.createElement("div");
+        row.className = "player-input-row";
+        row.innerHTML = `
+            <span class="avatar-display">${hewanAvatar[i-1].split(" ")[0]}</span>
+            <input type="text" id="p${i}-name" value="${i <= 2 ? 'Pemain ' + i : ''}" placeholder="Nama Pemain ${i}">
+        `;
+        container.appendChild(row);
+    }
+}
+
+function startGame() {
+    dataPemain = [];
+    for (let i = 1; i <= 4; i++) {
+        const nama = document.getElementById(`p${i}-name`).value.trim();
+        if (nama !== "") {
+            dataPemain.push({
+                id: i, nama: nama, avatar: hewanAvatar[i-1].split(" ")[0], posisi: 1, warna: warnaPemain[i-1]
+            });
+        }
+    }
+    if (dataPemain.length < 1) { alert("Isi minimal satu nama pemain!"); return; }
+
+    initAudioEngine();
+    document.getElementById("setup-screen").style.display = "none";
+    document.getElementById("game-screen").style.display = "flex";
+    gameAktif = true;
+    buatPapanVisual();
+    updateTurnIndicator();
+}
+
+function buatPapanVisual() {
+    const boardEl = document.getElementById("board"); boardEl.innerHTML = "";
+    for (let i = 1; i <= TOTAL_PETAK; i++) {
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        if (i === 1) tile.classList.add("tile-start");
+        if (i === TOTAL_PETAK) tile.classList.add("tile-finish");
+        
+        let teksLabel = i;
+        if (tipePetak[i]) {
+            tile.classList.add(tipePetak[i].tipe === "bonus" ? "tile-bonus" : "tile-zonk");
+            teksLabel = tipePetak[i].label;
+        }
+        tile.innerHTML = `<div>${teksLabel}</div><div class="token-space" id="tile-${i}-tokens"></div>`;
+        boardEl.appendChild(tile);
+    }
+    taruhPionPemain();
+}
+
+function taruhPionPemain() {
+    for (let i = 1; i <= TOTAL_PETAK; i++) document.getElementById(`tile-${i}-tokens`).innerHTML = "";
+    dataPemain.forEach(p => {
+        const span = document.createElement("span"); span.className = "pion"; span.innerText = p.avatar;
+        document.getElementById(`tile-${p.posisi}-tokens`).appendChild(span);
+    });
+}
+
+function startTimer(durasi, callbackTimeout) {
+    clearInterval(hitungMundur);
+    sisaWaktu = durasi;
+    updateTimerUI();
+
+    hitungMundur = setInterval(() => {
+        sisaWaktu--;
+        updateTimerUI();
+        if (sisaWaktu <= 5 && sisaWaktu > 0) mainkanSFX('tick');
+
+        if (sisaWaktu <= 0) {
+            clearInterval(hitungMundur);
+            callbackTimeout();
+        }
+    }, 1000);
+}
+
+function updateTimerUI() {
+    const tBox = document.getElementById("timer-display");
+    document.getElementById("timer-num").innerText = sisaWaktu;
+    if(document.getElementById("modal-timer")) {
+        document.getElementById("modal-timer").innerText = `⏱️ ${sisaWaktu}s`;
+    }
+    if (sisaWaktu <= 6) tBox.classList.add("timer-urgent");
+    else tBox.classList.remove("timer-urgent");
+}
+
+function updateTurnIndicator() {
+    const pAktif = dataPemain[indeksTurn];
+    const box = document.getElementById("current-turn-box");
+    box.innerText = `Giliran: ${pAktif.nama} ${pAktif.avatar}`;
+    box.style.backgroundColor = pAktif.warna;
+    document.getElementById("game-info-msg").innerText = "Ayo kocok dadumu!";
+    
+    startTimer(15, () => {
+        mainkanSFX('wrong');
+        alert(`⏱️ Waktu habis! ${pAktif.nama} terlalu lama berpikir. Giliran dilewati.`);
+        pindahGiliran();
+    });
+}
+
+function rollDice() {
+    if (!gameAktif || !daduBisaDikocok) return;
+    daduBisaDikocok = false;
+    clearInterval(hitungMundur);
+
+    mainkanSFX('dice');
+    const dice = document.getElementById("visual-dice");
+    dice.classList.add("rolling");
+    
+    angkaDaduSekarang = Math.floor(Math.random() * 6) + 1;
+
+    setTimeout(() => {
+        dice.classList.remove("rolling");
+        document.getElementById("game-info-msg").innerText = `${dataPemain[indeksTurn].nama} mendapatkan angka ${angkaDaduSekarang}!`;
+        setTimeout(bukaModalKuis, 600);
+    }, 700);
+}
+
+function bukaModalKuis() {
+    const pAktif = dataPemain[indeksTurn];
+    const idxSoal = Math.min(pAktif.posisi - 1, bankPertanyaan.length - 1);
+    const kuis = bankPertanyaan[idxSoal];
+
+    document.getElementById("quiz-category").innerText = kuis.kategori;
+    document.getElementById("active-player-name").innerText = `KUIS PETAK ${pAktif.posisi} - TARGET ${pAktif.nama.toUpperCase()}`;
+    document.getElementById("quiz-question").innerText = kuis.pertanyaan;
+
+    const boxOpsi = document.getElementById("quiz-options");
+    boxOpsi.innerHTML = "";
+    kuis.pilihan.forEach((pil, idx) => {
+        const b = document.createElement("button"); b.className = "opt-btn"; b.innerText = pil;
+        b.onclick = () => verifikasiJawaban(idx, kuis.jawaban);
+        boxOpsi.appendChild(b);
+    });
+
+    document.getElementById("quiz-overlay").style.display = "flex";
+
+    startTimer(30, () => {
+        document.getElementById("quiz-overlay").style.display = "none";
+        mainkanSFX('wrong');
+        pAktif.posisi = Math.max(1, pAktif.posisi - 3);
+        taruhPionPemain();
+        alert(`🚨 WAKTU HABIS! Hukuman: Mundur 3 petak!`);
+        pindahGiliran();
+    });
+}
+
+function verifikasiJawaban(pilihanUser, pilihanBenar) {
+    clearInterval(hitungMundur);
+    document.getElementById("quiz-overlay").style.display = "none";
+    const pAktif = dataPemain[indeksTurn];
+
+    if (pilihanUser === pilihanBenar) {
+        mainkanSFX('correct');
+        pAktif.posisi += angkaDaduSekarang;
+        if (pAktif.posisi > TOTAL_PETAK) pAktif.posisi = TOTAL_PETAK;
+        alert(`✅ JAWABAN BENAR! ${pAktif.nama} maju +${angkaDaduSekarang} langkah.`);
+        eksekusiPetakEfek(pAktif);
+    } else {
+        mainkanSFX('wrong');
+        pAktif.posisi = Math.max(1, pAktif.posisi - 2);
+        alert(`❌ JAWABAN SALAH! Hukuman: Mundur -2 langkah.`);
+    }
+
+    taruhPionPemain();
+
+    if (pAktif.posisi >= TOTAL_PETAK) {
+        gameAktif = false;
+        document.getElementById("game-info-msg").innerHTML = `<span style="color:white; background:var(--success); padding:12px 25px; border-radius:30px; font-size:20px">🏆 JUARA 1: ${pAktif.nama}! 🏆</span>`;
+        startKembangApi();
+        return;
+    }
+    pindahGiliran();
+}
+
+function eksekusiPetakEfek(p) {
+    const efek = tipePetak[p.posisi];
+    if (efek) {
+        if (efek.tipe === "bonus") {
+            p.posisi = Math.min(TOTAL_PETAK, p.posisi + efek.nilai);
+            alert(`🚀 BONUS ARENA! Meluncur maju +${efek.nilai} petak!`);
+        } else if (efek.tipe === "zonk") {
+            p.posisi = Math.max(1, p.posisi - efek.nilai);
+            alert(`💥 JEBAKAN ARENA! Terhempas mundur -${efek.nilai} petak!`);
+        }
+    }
+}
+
+function pindahGiliran() {
+    indeksTurn = (indeksTurn + 1) % dataPemain.length;
+    daduBisaDikocok = true;
+    updateTurnIndicator();
+}
+
+const canvas = document.getElementById("fx-canvas"); const ctx = canvas.getContext("2d");
+let listPartikel = [];
+function buatLedakan(x, y) {
+    const warna = ["#74b9ff", "#0984e3", "#00cec9", "#fdcb6e", "#ffffff"];
+    for(let i=0; i<50; i++) {
+        listPartikel.push({
+            x: x, y: y, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10,
+            a: 1, w: warna[Math.floor(Math.random() * warna.length)], s: Math.random() * 3 + 2
+        });
+    }
+}
+function loopAnimasi() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(let i = listPartikel.length - 1; i >= 0; i--) {
+        let pt = listPartikel[i]; pt.x += pt.vx; pt.y += pt.vy; pt.vy += 0.05; pt.a -= 0.01;
+        if(pt.a <= 0) { listPartikel.splice(i, 1); continue; }
+        ctx.globalAlpha = pt.a; ctx.fillStyle = pt.w; ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.s, 0, Math.PI * 2); ctx.fill();
+    }
+    if(!gameAktif) requestAnimationFrame(loopAnimasi);
+}
+function startKembangApi() {
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    loopAnimasi();
+    setInterval(() => { if(!gameAktif) buatLedakan(Math.random() * canvas.width, Math.random() * canvas.height * 0.4); }, 300);
+}
+
+initSetup();
+</script>
+</body>
+</html>
